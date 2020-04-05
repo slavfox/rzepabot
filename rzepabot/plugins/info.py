@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from typing import Optional
+from urllib.parse import quote
 
 import pendulum
 from discord import Embed
@@ -13,10 +14,12 @@ from discord.ext import commands
 
 from rzepabot.config import depoliszifaj
 from rzepabot.exceptions import RzepaException
+from rzepabot.plugins.dodokod import Dodokod
 from rzepabot.persistence import (
     PERSONALITIES,
     SPECIES,
     SPECIES_EMOJI,
+    PERSONALITY_EMOJI,
     Villager,
     db,
     Critter,
@@ -57,7 +60,8 @@ def villager_profile(villager: Villager):
         Embed(
             color=0x8AD88A,
             title=f"{villager.name}",
-            url=f"https://animalcrossing.fandom.com/wiki/{villager.name}",
+            url=f"https://animalcrossing.fandom.com/wiki/"
+            f"{quote(villager.name)}",
             description=f'*"{villager.catchphrase}"*',
         )
         .set_thumbnail(url=villager.image_url)
@@ -113,7 +117,8 @@ def hour_mask_to_printable(mask):
     for i in range(1, 24):
         if mask & (1 << i):
             if start == -1:
-                start = end = i
+                end = i
+                start = end - 1
             elif (i - end) == 1:
                 end = i
             else:
@@ -259,7 +264,7 @@ class Info(commands.Cog):
     Komendy do szukania informacji na temat Animal Crossing: New Horizons.
     """
 
-    @commands.group(aliases=["ryby"])
+    @commands.group(aliases=["ryby", "r"])
     async def ryby_(self, ctx: commands.Context):
         """
         Komendy dotyczące ryb. Wpisz `$help ryby`.
@@ -275,7 +280,7 @@ class Info(commands.Cog):
                 )
             return await self.ryby_teraz(ctx)
 
-    @ryby_.command(aliases=["miesiąc", "miesiac"])
+    @ryby_.command(aliases=["miesiąc", "miesiac", "m"])
     async def ryby_miesiac(
         self, ctx: commands.Context, miesiac: Optional[str]
     ):
@@ -299,7 +304,7 @@ class Info(commands.Cog):
         ):
             await ctx.send(message)
 
-    @ryby_.command(aliases=["nowe"])
+    @ryby_.command(aliases=["nowe", "n"])
     async def ryby_nowe(self, ctx: commands.Context, miesiac: Optional[str]):
         """
         Wypisuje nowe w danym (domyślnie obecnym) miesiącu ryby.
@@ -321,7 +326,7 @@ class Info(commands.Cog):
         ):
             await ctx.send(message)
 
-    @ryby_.command(aliases=["koniec"])
+    @ryby_.command(aliases=["koniec", "k"])
     async def ryby_koniec(self, ctx: commands.Context, miesiac: Optional[str]):
         """
         Ryby dostępne tylko do końca danego (domyślnie obecnego) miesiąca.
@@ -343,7 +348,7 @@ class Info(commands.Cog):
         ):
             await ctx.send(message)
 
-    @ryby_.command(aliases=["teraz"])
+    @ryby_.command(aliases=["teraz", "t"])
     async def ryby_teraz(self, ctx: commands.Context):
         """
         Wypisuje dostępne w tej chwili do złowienia ryby.
@@ -354,31 +359,33 @@ class Info(commands.Cog):
         ):
             await ctx.send(message)
 
-    @commands.group(aliases=["robaki"])
-    async def robaki_(self, ctx: commands.Context):
+    @commands.group(aliases=["robaki", "insekty", "i"])
+    async def insekty_(self, ctx: commands.Context):
         """
-        Komendy dotyczące robaków. Wpisz `$help robaki`.
+        Komendy dotyczące insektów. Wpisz `$help insekty`.
 
-        Wywołane jako `$robaki styczeń` wypisuje informacje o robakach
-        dostępnych w styczniu. Wywołane jako `$robaki` wypisuje informacje o
+        Wywołane jako `$insekty styczeń` wypisuje informacje o robakach
+        dostępnych w styczniu. Wywołane jako `$insekty` wypisuje informacje o
         robakach dostępnych w tej chwili.
         """
         if ctx.invoked_subcommand is None:
             if ctx.subcommand_passed:
-                return await self.robaki_miesiac(
+                return await self.insekty_miesiac(
                     ctx, ctx.subcommand_passed.strip()
                 )
-            return await self.robaki_teraz(ctx)
+            return await self.insekty_teraz(ctx)
 
-    @robaki_.command(aliases=["miesiąc", "miesiac"])
-    async def robaki_miesiac(
+    @insekty_.command(aliases=["miesiąc", "miesiac", "m"])
+    async def insekty_miesiac(
         self, ctx: commands.Context, miesiac: Optional[str]
     ):
         """
-        Wypisuje dostępne w danym (domyślnie obecnym) miesiącu robaki.
+        Wypisuje dostępne w danym (domyślnie obecnym) miesiącu insekty.
         """
         if not miesiac:
-            m_no = pendulum.now().month - 1
+            now = pendulum.now()
+            m_no = now.month - 1
+            miesiac = rev_months[m_no]
         else:
             try:
                 m_no = MONTHS[depoliszifaj(miesiac.lower())]
@@ -387,16 +394,16 @@ class Info(commands.Cog):
                     f"{miesiac} nie jest poprawną nazwą miesiąca."
                 )
         for message in format_critters(
-            f"🎷🐛 **Robaki na miesiąc {miesiac.lower()}** 🎷🐛\n\n",
+            f"🎷🐛 **Insekty na miesiąc {miesiac.lower()}** 🎷🐛\n\n",
             get_critters_for_month(m_no, is_fish=False),
             print_time=True,
         ):
             await ctx.send(message)
 
-    @robaki_.command(aliases=["nowe"])
-    async def robaki_nowe(self, ctx: commands.Context, miesiac: Optional[str]):
+    @insekty_.command(aliases=["nowe", "n"])
+    async def insekty_nowe(self, ctx: commands.Context, miesiac: Optional[str]):
         """
-        Wypisuje nowe w danym (domyślnie obecnym) miesiącu robaki.
+        Wypisuje nowe w danym (domyślnie obecnym) miesiącu insekty.
         """
         if not miesiac:
             m_no = pendulum.now().month - 1
@@ -409,18 +416,18 @@ class Info(commands.Cog):
                     f"{miesiac} nie jest poprawną nazwą miesiąca."
                 )
         for message in format_critters(
-            f"🎷🐛 **Nowe robaki na miesiąc {miesiac.lower()}** 🎷🐛\n\n",
+            f"🎷🐛 **Nowe insekty na miesiąc {miesiac.lower()}** 🎷🐛\n\n",
             get_new_critters_for_month(m_no, is_fish=False),
             print_time=True,
         ):
             await ctx.send(message)
 
-    @robaki_.command(aliases=["koniec"])
-    async def robaki_koniec(
+    @insekty_.command(aliases=["koniec", "k"])
+    async def insekty_koniec(
         self, ctx: commands.Context, miesiac: Optional[str]
     ):
         """
-        Robaki dostępne tylko do końca danego (domyślnie obecnego) miesiąca.
+        Insekty dostępne tylko do końca danego (domyślnie obecnego) miesiąca.
         """
         if not miesiac:
             m_no = pendulum.now().month - 1
@@ -433,19 +440,19 @@ class Info(commands.Cog):
                 )
         mname = pendulum.now().replace(month=m_no + 1).format("MMMM")
         for message in format_critters(
-            f"🎷🐛 **Robaki dostępne tylko do końca {mname}** 🎷🐛\n\n",
+            f"🎷🐛 **Insekty dostępne tylko do końca {mname}** 🎷🐛\n\n",
             get_leaving_critters_for_month(m_no, is_fish=False),
             print_time=True,
         ):
             await ctx.send(message)
 
-    @robaki_.command(aliases=["teraz"])
-    async def robaki_teraz(self, ctx: commands.Context):
+    @insekty_.command(aliases=["teraz", "t"])
+    async def insekty_teraz(self, ctx: commands.Context):
         """
-        Wypisuje dostępne w tej chwili do złapania robaki.
+        Wypisuje dostępne w tej chwili do złapania insekty.
         """
         for message in format_critters(
-            "🎷🐛 **Obecnie występujące robaki** 🎷🐛\n\n",
+            "🎷🐛 **Obecnie występujące insekty** 🎷🐛\n\n",
             get_current_critters(is_fish=False),
         ):
             await ctx.send(message)
@@ -460,16 +467,7 @@ class Info(commands.Cog):
         if ctx.invoked_subcommand is None:
             if ctx.subcommand_passed:
                 return await self.profile(ctx, ctx.subcommand_passed.strip())
-            commands = sorted(
-                {
-                    f"`{command.aliases[0]}`"
-                    for command in self.zwierzaki_.walk_commands()
-                }
-            )
-            raise RzepaException(
-                f"Musisz podać jedną z komend: "
-                f"{', '.join(commands[:-1])}, lub {commands[-1]}"
-            )
+            return await Dodokod.close(self, ctx)
 
     @zwierzaki_.command(aliases=["osobowość", "o"])
     async def personality(self, ctx: commands.Context, tekst: str):
@@ -492,19 +490,30 @@ class Info(commands.Cog):
                 f"{options[-1]}."
             )
         with db:
-            villagers = []
+            villagers = {}
             for villager in (
                 Villager.select()
                 .where(Villager.personality == personality)
-                .order_by(Villager.name)
+                .order_by(Villager.species, Villager.name)
             ):
-                villagers.append(villager.name)
-
-        return await ctx.send(
-            f":smiley_cat: "
-            f'**Zwierzaki o osobowości _"{personality}"_** :smiley_cat:\n\n'
-            f"{', '.join(villagers)}"
+                villagers.setdefault(villager.species, []).append(
+                    villager.name
+                )
+        embed = Embed(
+            title=f':smiley_cat: Zwierzaki o osobowości _"{personality}"_ '
+            f":smiley_cat:"
         )
+        for p, vs in villagers.items():
+            embed.add_field(
+                name=p,
+                value=", ".join(
+                    f"[{n}](https://animalcrossing.fandom.com/wiki/"
+                    f"{quote(n)})"
+                    for n in vs
+                ),
+                inline=True,
+            )
+        return await ctx.send(PERSONALITY_EMOJI[personality], embed=embed)
 
     @zwierzaki_.command(aliases=["gatunek", "g"])
     async def species(self, ctx: commands.Context, tekst: str):
@@ -534,19 +543,30 @@ class Info(commands.Cog):
                 f"{options[-1]}."
             )
         with db:
-            villagers = []
+            villagers = {}
             for villager in (
                 Villager.select()
                 .where(Villager.species == species)
-                .order_by(Villager.name)
+                .order_by(Villager.personality, Villager.name)
             ):
-                villagers.append(villager.name)
-
-        return await ctx.send(
-            f":smiley_cat: "
-            f'**Zwierzaki z gatunku _"{species}"_** :smiley_cat:\n\n'
-            f"{', '.join(villagers)}"
+                villagers.setdefault(villager.personality, []).append(
+                    villager.name
+                )
+        embed = Embed(
+            title=f':smiley_cat: Zwierzaki z gatunku _"{species}"_ '
+            f":smiley_cat:",
         )
+        for p, vs in villagers.items():
+            embed.add_field(
+                name=p,
+                value=", ".join(
+                    f"[{n}](https://animalcrossing.fandom.com/wiki/"
+                    f"{quote(n)})"
+                    for n in vs
+                ),
+                inline=False,
+            )
+        return await ctx.send(SPECIES_EMOJI[species], embed=embed)
 
     @zwierzaki_.command(aliases=["szukaj", "znajdź", "s", "z"])
     async def find(self, ctx: commands.Context, tekst: str):

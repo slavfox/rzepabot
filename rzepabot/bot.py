@@ -17,13 +17,17 @@ from discord.utils import oauth_url
 
 from rzepabot.config import RZEPABOT_PERMS
 from rzepabot.exceptions import RzepaException
-from rzepabot.persistence import Guild, db
+from rzepabot.persistence import Guild, db, cleanup
 from rzepabot.plugins.dodokod import Dodokod
 from rzepabot.plugins.profile import Profil
 from rzepabot.plugins.info import Info
 from rzepabot.presence import get_presence, schedule_next_change
 
 logger = logging.getLogger()
+
+pl = logging.getLogger("peewee")
+pl.addHandler(logging.StreamHandler())
+pl.setLevel(logging.DEBUG)
 
 
 class RzepabotHelpPaginator(commands.Paginator):
@@ -49,7 +53,8 @@ class RzepaBotHelp(commands.DefaultHelpCommand):
             f"Wpisz `{self.clean_prefix}{command_name} <nazwa komendy>` aby "
             f"dowiedzieć się więcej o danej komendzie.\n "
             f"Możesz również wpisać `{self.clean_prefix}{command_name}` "
-            f"aby dowiedzieć się więcej o całej kategorii"
+            f"aby dowiedzieć się więcej o całej kategorii.\n\n"
+            f"Komendy można wywoływać też podając tylko ich pierwszą literę."
         )
 
     def command_not_found(self, string):
@@ -173,6 +178,11 @@ class RzepaBot(commands.Bot):
             presence = get_presence()
             await self.change_presence(activity=presence)
             await asyncio.sleep(schedule_next_change(datetime.now()))
+
+    async def cleanup(self):
+        while True:
+            cleanup()
+            await asyncio.sleep(60 * 60)
 
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CommandInvokeError):

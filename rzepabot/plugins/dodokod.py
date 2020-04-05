@@ -35,12 +35,12 @@ def validate_dodocode(dodocode: str):
 class Dodokod(commands.Cog):
     """Komendy dotyczące otwierania wyspy dla gości."""
 
-    @commands.command(aliases=["otwórz", "otworz"])
+    @commands.command(aliases=["otwórz", "otworz", "o"])
     @commands.check(commands.guild_only())
     async def open(
         self,
         ctx: commands.Context,
-        dodokod: str,
+        dodokod: Optional[str],
         komentarz: commands.Greedy[Optional[str]],
     ):
         """
@@ -48,6 +48,8 @@ class Dodokod(commands.Cog):
 
         Usuwa wcześniej zarejestrowane dodokody.
         """
+        if not dodokod:
+            return await self.list_open(ctx)
         code = validate_dodocode(dodokod)
         komentarz = await commands.clean_content().convert(
             ctx, " ".join(komentarz)
@@ -56,7 +58,7 @@ class Dodokod(commands.Cog):
             raise RzepaException(f"Ten komentarz jest zbyt długi!")
 
         with db:
-            user, guild = get_user_and_guild(ctx.author.id, ctx.guild.id, db)
+            user, guild = get_user_and_guild(ctx.author.id, ctx.guild, db)
             # Clean up old dodocodes
             DodoCode.delete().where(
                 DodoCode.user == user, DodoCode.guild_id == guild.id
@@ -64,7 +66,7 @@ class Dodokod(commands.Cog):
             DodoCode(
                 user=user, guild=guild, code=code, comment=komentarz
             ).save()
-        island = user.island
+        island = user.island.first()
         if island:
             island_name = island.island_name
         else:
@@ -84,14 +86,14 @@ class Dodokod(commands.Cog):
         Zamyka wcześniej otwartą wyspę.
         """
         with db:
-            user, _ = get_user_and_guild(ctx.author.id, ctx.guild.id, db)
+            user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
             code = DodoCode.get_or_none(DodoCode.user == user)
             if not code:
                 return await ctx.send(
                     f"{ctx.author.mention}, nie masz obecnie otwartej wyspy."
                 )
             code.delete_instance()
-            island = user.island
+            island = user.island.first()
             if island:
                 island_name = island.island_name
             else:
@@ -107,7 +109,7 @@ class Dodokod(commands.Cog):
         Wypisuje informacje o otwartych wyspach na obecnym serwerze.
         """
         with db:
-            user, guild = get_user_and_guild(ctx.author.id, ctx.guild.id, db)
+            user, guild = get_user_and_guild(ctx.author.id, ctx.guild, db)
             codes = (
                 DodoCode.select(DodoCode, User, Island)
                 .join(User)
@@ -117,8 +119,8 @@ class Dodokod(commands.Cog):
             )
             lines = []
             for i, code in enumerate(codes, 1):
-                if island := user.island.first() and island.name:
-                    island_identifier = island.name
+                if (island := user.island.first()) and island.island_name:
+                    island_identifier = island.island_name
                 else:
                     island_identifier = (
                         f"Wyspa użytkownika **" f"{ctx.author.display_name}**"

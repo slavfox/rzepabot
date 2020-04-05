@@ -29,6 +29,7 @@ from rzepabot.config import DB_PATH, tznow_dt, tznow_t
 db = SqliteDatabase(DB_PATH, pragmas={"foreign_keys": 1})
 
 dt_default = lambda: tznow_dt().to_datetime_string()
+
 t_default = tznow_t
 
 
@@ -72,6 +73,17 @@ PERSONALITIES = [
     ("próżny", "prozny", "próżna", "prozna", "smug"),
     ("przemądrzała", "przemądrzały", "przemadrzala", "przemadrzaly", "snooty"),
 ]
+
+PERSONALITY_EMOJI = {
+    "Marudny": "😡",
+    "Biceps": "🏋️‍♂️",
+    "Leniwy": "🛌",
+    "Normalna": "👩",
+    "Ożywiona": "💃",
+    "Siostrzana": "🏃‍♀️",
+    "Próżny": "🧐",
+    "Przemądrzała": "👸",
+}
 
 SPECIES = [
     ("ptak", "bird"),
@@ -224,7 +236,7 @@ class Critter(BaseModel):
 class HotItem(BaseModel):
     user = ForeignKeyField(User, backref="hot_items")
     item = CharField()
-    timestamp = DateTimeField(default=lambda: dt_default)
+    timestamp = DateTimeField(default=dt_default)
 
 
 class DodoCode(BaseModel):
@@ -255,10 +267,14 @@ models = [
 db.create_tables(models)
 
 
-def get_user_and_guild(user_id, guild_id, dbcontext):
+def get_user_and_guild(user_id, discord_guild, dbcontext):
     user, _ = User.get_or_create(discord_id=user_id)
-    guild, _ = Guild.get_or_create(discord_id=guild_id)
-    guild_membership = GuildMembership.get_or_create(user=user, guild=guild)
+    guild = None
+    if discord_guild is not None:
+        guild, _ = Guild.get_or_create(discord_id=discord_guild.id)
+        guild_membership = GuildMembership.get_or_create(
+            user=user, guild=guild
+        )
     return user, guild
 
 

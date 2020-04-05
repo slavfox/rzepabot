@@ -6,12 +6,13 @@
 from __future__ import annotations
 
 from typing import Optional
-from discord import Member, Embed
+from discord import Member, Embed, Guild as DiscordGuild
 from discord.ext import commands
 from peewee import JOIN, IntegrityError
-from pendulum import instance, timezone
+from pendulum import instance, timezone, now
 from discord.ext.commands.converter import MemberConverter
 from rzepabot.plugins.info import villager_profile
+from urllib.parse import quote, urlencode
 
 from rzepabot.exceptions import RzepaException
 from rzepabot.persistence import (
@@ -23,6 +24,10 @@ from rzepabot.persistence import (
     Residency,
     Villager,
     FRUIT,
+    HotItem,
+    Guild,
+    GuildMembership,
+    tznow_dt,
 )
 
 
@@ -40,7 +45,9 @@ def format_fc(friend_code: str) -> str:
     return f"SW-{friend_code[:4]}-{friend_code[4:8]}-{friend_code[8:]}"
 
 
-def format_profile(island: Island, user: Member) -> Embed:
+def format_profile(
+    island: Island, user: Member, dodocode: str = None, item: str = None
+) -> Embed:
     if (
         role := getattr(user, "top_role", None)
     ) and role.colour.value != 0xFFFFFF:
@@ -50,6 +57,14 @@ def format_profile(island: Island, user: Member) -> Embed:
     avatar_url = f"{user.avatar_url.BASE}{user.avatar_url._url}"
     title = island.island_name or f"Wyspa użytkownika {user.display_name}"
     embed = Embed(colour=colour, title=title).set_thumbnail(url=avatar_url)
+    if item:
+        embed.add_field(
+            name="📦 **Gorący przedmiot na dziś** 📦",
+            value=f"[{item}]("
+            f"https://animalcrossing.fandom.com/wiki/Special:Search?"
+            f"{urlencode({'query': item})})",
+            inline=False,
+        )
     if island.island_name:
         embed.add_field(
             name="Nazwa wyspy", value=island.island_name, inline=False
@@ -68,8 +83,8 @@ def format_profile(island: Island, user: Member) -> Embed:
             .tuples()
         )
         residents = [
-            f"[{name}](https://animalcrossing.fandom.com/wiki/{name})"
-            for name, in villagers
+            f"[{n}](https://animalcrossing.fandom.com/wiki/{quote(n)})"
+            for n, in villagers
         ]
     if residents:
         embed.add_field(
@@ -88,6 +103,12 @@ def format_profile(island: Island, user: Member) -> Embed:
             value=f"`{format_fc(island.friend_code)}`",
             inline=False,
         )
+    if dodocode:
+        embed.description = (
+            f"🗺 **Ta wyspa jest obecnie otwarta!** 🗺\n"
+            f"Możesz odwiedzić ją z dodokodem `{dodocode}`."
+        )
+
     return embed
 
 
@@ -101,7 +122,7 @@ class Profil(commands.Cog):
         """
         fc = match_fc(friend_code)
         with db:
-            user, _ = get_user_and_guild(ctx.author.id, ctx.guild.id, db)
+            user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
             island, _ = Island.get_or_create(villager=user)
             island.friend_code = fc
             island.save()
@@ -123,7 +144,7 @@ class Profil(commands.Cog):
             if not nazwa:
                 nazwa = None
         with db:
-            user, _ = get_user_and_guild(ctx.author.id, ctx.guild.id, db)
+            user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
             island = Island.get_or_none(Island.villager == user)
             if not island:
                 if not nazwa:
@@ -156,7 +177,7 @@ class Profil(commands.Cog):
             if not nazwa:
                 nazwa = None
         with db:
-            user, _ = get_user_and_guild(ctx.author.id, ctx.guild.id, db)
+            user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
             island = Island.get_or_none(Island.villager == user)
             if not island:
                 if not nazwa:
@@ -182,7 +203,7 @@ class Profil(commands.Cog):
         Dodaje mieszkańca do Twojej wyspy.
         """
         with db:
-            user, _ = get_user_and_guild(ctx.author.id, ctx.guild.id, db)
+            user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
             island, created = Island.get_or_create(villager=user)
             if not created:
                 if (
@@ -221,10 +242,11 @@ class Profil(commands.Cog):
         Wyrzuca mieszkańca z Twojej wyspy.
         """
         with db:
-            user, _ = get_user_and_guild(ctx.author.id, ctx.guild.id, db)
+            user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
             island, created = Island.get_or_create(villager=user)
             residency = (
-                Residency.select(Residency, Villager)
+                Residency.select()
+                .join(Villager)
                 .where(
                     Residency.acprofile == island, Villager.name ** zwierzak
                 )
@@ -253,17 +275,84 @@ class Profil(commands.Cog):
         if user is None:
             user = ctx.author
         with db:
-            island = (
-                Island.select()
-                .join(User)
-                .where(User.discord_id == user.id)
+            db_user, _ = get_user_and_guild(user.id, ctx.guild, db)
+            island = Island.select().where(Island.villager == db_user).first()
+            item = None
+            hot_item = (
+                HotItem.select(HotItem.item)
+                .where(HotItem.user == db_user)
                 .first()
             )
+            if hot_item:
+                item = hot_item.item
+            dodocode = None
+            if ctx.guild is not None:
+                code = (
+                    DodoCode.select(DodoCode.code)
+                    .join(User)
+                    .switch(DodoCode)
+                    .join(Guild)
+                    .where(
+                        Guild.discord_id == ctx.guild.id,
+                        User.discord_id == user.id,
+                    )
+                    .first()
+                )
+                if code:
+                    dodocode = code.code
         if not island:
             raise RzepaException(
                 f"Użytkownik {user.display_name} nie ma profilu."
             )
-        embed = format_profile(island, user)
+        embed = format_profile(island, user, dodocode, item)
         return await ctx.send(
             f"️🏝 **Profil użytkownika {user.display_name}** 🏝", embed=embed
         )
+
+    @commands.command(aliases=["item", "iotd", "hotitem"])
+    async def hot_item(self, ctx: commands.Context, *, item: Optional[str]):
+        """
+        Ustawia Hot Item. Bez argumentów, wyświetla dzisiejsze hot itemy na tym serwerze.
+        """
+        t = tznow_dt()
+        with db:
+            if not item:
+                # get all
+                if not ctx.guild:
+                    raise commands.NoPrivateMessage()
+                g: DiscordGuild = ctx.guild
+                hot_items = (
+                    HotItem.select(HotItem.item, User.discord_id)
+                    .join(User)
+                    .join(GuildMembership)
+                    .join(Guild)
+                    .where(
+                        Guild.discord_id == g.id,
+                        HotItem.timestamp.day == t.day,
+                        HotItem.timestamp.month == t.month,
+                    )
+                    .distinct(True)
+                    .tuples()
+                )
+                s = f"📦 **Gorące przedmioty na {t.format('LL')}** 📦\n\n"
+                messages = []
+                for i in hot_items:
+                    user = g.get_member(i[1])
+                    if not user:
+                        continue
+                    line = f"**{user.display_name}**: {i[0]}\n"
+                    if len(s + line) > 1998:
+                        messages.append(s)
+                        s = ""
+                    s += line
+                messages.append(s)
+                for message in messages:
+                    return await ctx.send(message)
+            # set
+            user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
+            item = await commands.clean_content().convert(ctx, item)
+            HotItem.delete().where(HotItem.user == user).execute()
+            HotItem.create(user=user, item=item)
+            return await ctx.send(
+                f"📦 Zarejestrowano twój dzisiejszy Hot Item: `{item}`"
+            )
