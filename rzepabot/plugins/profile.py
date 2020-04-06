@@ -88,7 +88,9 @@ def format_profile(
         ]
     if residents:
         embed.add_field(
-            name="Mieszkańcy", value=", ".join(residents), inline=False
+            name=f"Mieszkańcy ({len(residents)}/10)",
+            value=", ".join(residents),
+            inline=False,
         )
     if island.native_fruit:
         fruit = FRUIT[island.native_fruit]

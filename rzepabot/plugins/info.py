@@ -9,7 +9,7 @@ from typing import Optional
 from urllib.parse import quote
 
 import pendulum
-from discord import Embed
+from discord import Embed, Emoji
 from discord.ext import commands
 
 from rzepabot.config import depoliszifaj
@@ -20,10 +20,13 @@ from rzepabot.persistence import (
     SPECIES,
     SPECIES_EMOJI,
     PERSONALITY_EMOJI,
+    PERSONALITY_GENDER, REVERSE_SPECIES,
     Villager,
     db,
     Critter,
 )
+
+KNIFE_EMOJI = 690576498985271317
 
 MONTHS = {
     "styczen": 0,
@@ -55,19 +58,34 @@ rev_months = {
 }
 
 
-def villager_profile(villager: Villager):
-    return (
+def villager_profile(title, villager: Villager):
+    if villager.name == "Pietro":
+        species = "🤡 Zwiastun apokalipsy"
+    elif villager.name == "Hazel":
+        species = "💩 ~~Żuk gnojak~~ Wiewiórka"
+    else:
+        species = f"{SPECIES_EMOJI[villager.species]} {villager.species}"
+    embed = (
         Embed(
             color=0x8AD88A,
-            title=f"{villager.name}",
+            title=title,
             url=f"https://animalcrossing.fandom.com/wiki/"
             f"{quote(villager.name)}",
             description=f'*"{villager.catchphrase}"*',
         )
         .set_thumbnail(url=villager.image_url)
         .add_field(name="Imię", value=villager.name, inline=False)
-        .add_field(name="Gatunek", value=villager.species, inline=False)
-        .add_field(name="Osobowość", value=villager.personality, inline=False)
+        .add_field(
+            name="Gatunek",
+            value=f"{species}",
+            inline=False,
+        )
+        .add_field(
+            name="Osobowość",
+            value=f"{PERSONALITY_GENDER[villager.personality]} "
+                  f"{villager.personality}",
+            inline=False,
+        )
         .add_field(
             name="Urodziny",
             value=pendulum.now()
@@ -75,6 +93,7 @@ def villager_profile(villager: Villager):
             .format("D MMMM"),
         )
     )
+    return embed
 
 
 def month_mask_to_printable(mask):
@@ -264,6 +283,9 @@ class Info(commands.Cog):
     Komendy do szukania informacji na temat Animal Crossing: New Horizons.
     """
 
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
     @commands.group(aliases=["ryby", "r"])
     async def ryby_(self, ctx: commands.Context):
         """
@@ -401,7 +423,9 @@ class Info(commands.Cog):
             await ctx.send(message)
 
     @insekty_.command(aliases=["nowe", "n"])
-    async def insekty_nowe(self, ctx: commands.Context, miesiac: Optional[str]):
+    async def insekty_nowe(
+        self, ctx: commands.Context, miesiac: Optional[str]
+    ):
         """
         Wypisuje nowe w danym (domyślnie obecnym) miesiącu insekty.
         """
@@ -466,7 +490,8 @@ class Info(commands.Cog):
         """
         if ctx.invoked_subcommand is None:
             if ctx.subcommand_passed:
-                return await self.profile(ctx, ctx.subcommand_passed.strip())
+                return await self.profile(ctx,
+                                          tekst=ctx.subcommand_passed.strip())
             return await Dodokod.close(self, ctx)
 
     @zwierzaki_.command(aliases=["osobowość", "o"])
@@ -528,6 +553,9 @@ class Info(commands.Cog):
             if tekst in aliases:
                 species = aliases[0].capitalize()
                 break
+        else:
+            if tekst in REVERSE_SPECIES:
+                species = REVERSE_SPECIES[tekst]
         if not species:
             options = [
                 f"`{a[0]}`"
@@ -553,8 +581,8 @@ class Info(commands.Cog):
                     villager.name
                 )
         embed = Embed(
-            title=f':smiley_cat: Zwierzaki z gatunku _"{species}"_ '
-            f":smiley_cat:",
+            title=f'{SPECIES_EMOJI[species]} Zwierzaki z gatunku _"{species}"_ '
+            f"{SPECIES_EMOJI[species]}",
         )
         for p, vs in villagers.items():
             embed.add_field(
@@ -566,7 +594,7 @@ class Info(commands.Cog):
                 ),
                 inline=False,
             )
-        return await ctx.send(SPECIES_EMOJI[species], embed=embed)
+        return await ctx.send(embed=embed)
 
     @zwierzaki_.command(aliases=["szukaj", "znajdź", "s", "z"])
     async def find(self, ctx: commands.Context, tekst: str):
@@ -594,7 +622,7 @@ class Info(commands.Cog):
             return await ctx.send(embed=villager_profile(villager))
 
     @zwierzaki_.command(aliases=["profil", "p"])
-    async def profile(self, ctx: commands.Context, tekst: str):
+    async def profile(self, ctx: commands.Context, *, tekst: str):
         """Wyświetla informacje o danym zwierzaku."""
         tekst = tekst.lower().strip()
         with db:
@@ -605,7 +633,17 @@ class Info(commands.Cog):
                 f'Nie znaleziono zwierzaka o imieniu "{tekst.capitalize()}".'
             )
         emoji = SPECIES_EMOJI.get(villager.species)
+        if villager.name == "Pietro":
+            knife = self.bot.get_emoji(KNIFE_EMOJI)
+            knife: Emoji
+            if knife and knife.is_usable():
+                return await ctx.send(
+                    embed=villager_profile(
+                        f"{knife} **{villager.name}** {knife}", villager
+                    ),
+                )
         return await ctx.send(
-            f"{emoji} **{villager.name}** {emoji}",
-            embed=villager_profile(villager),
+            embed=villager_profile(
+                f"{emoji} **{villager.name}** {emoji}", villager
+            ),
         )
