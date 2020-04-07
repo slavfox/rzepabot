@@ -119,11 +119,13 @@ class Dodokod(commands.Cog):
             )
             lines = []
             for i, code in enumerate(codes, 1):
-                if (island := user.island.first()) and island.island_name:
+                if (island := code.user.island.first()) and island.island_name:
                     island_identifier = island.island_name
                 else:
+                    d_id = code.user.discord_id
+                    user = ctx.guild.get_member(d_id)
                     island_identifier = (
-                        f"Wyspa użytkownika **" f"{ctx.author.display_name}**"
+                        f"Wyspa użytkownika **" f"{user.display_name}**"
                     )
                 opened_at = instance(
                     code.timestamp, tz=timezone("Europe/Warsaw")
@@ -133,7 +135,7 @@ class Dodokod(commands.Cog):
                     comment = f', komentarz "{code.comment}"'
                 lines.append(
                     f"{i}. `{code.code}`: {island_identifier} "
-                    f"(otwarto **{opened_at}**{comment})"
+                    f"(otwarto **{opened_at}**{comment})\n"
                 )
 
             if not lines:
