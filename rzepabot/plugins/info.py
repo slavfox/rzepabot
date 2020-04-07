@@ -77,7 +77,8 @@ def villager_profile(title, villager: Villager):
         .set_thumbnail(url=villager.image_url)
         .add_field(
             name="Imię",
-            value=f"{PERSONALITY_GENDER[villager.personality]} villager.name",
+            value=f"{PERSONALITY_GENDER[villager.personality]} "
+                  f"{villager.name}",
             inline=False,
         )
         .add_field(name="Gatunek", value=f"{species}", inline=False,)
