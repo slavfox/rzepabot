@@ -5,8 +5,12 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 from __future__ import annotations
 
+from pathlib import Path
 from rzepabot.data import bugs, fish, villagers
 from rzepabot.persistence import Critter, Villager, db
+from rzepabot.config import RZEPABOT_ROOT
+
+CARDSPATH = Path(__file__).parent / "CARDS"
 
 
 def update_villagers():
@@ -34,6 +38,12 @@ def update_villagers():
         villager.personality = personality
         villager.image_url = image_url
         updated += villager.save()
+        cards = list(CARDSPATH.glob(f"**/*{name}.bin"))
+        if cards:
+            cards[0].rename(
+                RZEPABOT_ROOT / "rzepabot" / "data" / "cards" / f"{name}.bin"
+            )
+
     return created, updated
 
 

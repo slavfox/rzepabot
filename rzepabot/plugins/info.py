@@ -9,10 +9,10 @@ from typing import Optional
 from urllib.parse import quote
 
 import pendulum
-from discord import Embed, Emoji
+from discord import Embed, Emoji, File
 from discord.ext import commands
 
-from rzepabot.config import depoliszifaj
+from rzepabot.config import depoliszifaj, RZEPABOT_ROOT
 from rzepabot.exceptions import RzepaException
 from rzepabot.plugins.dodokod import Dodokod
 from rzepabot.persistence import (
@@ -20,7 +20,8 @@ from rzepabot.persistence import (
     SPECIES,
     SPECIES_EMOJI,
     PERSONALITY_EMOJI,
-    PERSONALITY_GENDER, REVERSE_SPECIES,
+    PERSONALITY_GENDER,
+    REVERSE_SPECIES,
     Villager,
     db,
     Critter,
@@ -74,16 +75,16 @@ def villager_profile(title, villager: Villager):
             description=f'*"{villager.catchphrase}"*',
         )
         .set_thumbnail(url=villager.image_url)
-        .add_field(name="Imię", value=villager.name, inline=False)
         .add_field(
-            name="Gatunek",
-            value=f"{species}",
+            name="Imię",
+            value=f"{PERSONALITY_GENDER[villager.personality]} villager.name",
             inline=False,
         )
+        .add_field(name="Gatunek", value=f"{species}", inline=False,)
         .add_field(
             name="Osobowość",
-            value=f"{PERSONALITY_GENDER[villager.personality]} "
-                  f"{villager.personality}",
+            value=f"{PERSONALITY_EMOJI[villager.personality]} "
+            f"{villager.personality}",
             inline=False,
         )
         .add_field(
@@ -490,8 +491,9 @@ class Info(commands.Cog):
         """
         if ctx.invoked_subcommand is None:
             if ctx.subcommand_passed:
-                return await self.profile(ctx,
-                                          tekst=ctx.subcommand_passed.strip())
+                return await self.profile(
+                    ctx, tekst=ctx.subcommand_passed.strip()
+                )
             return await Dodokod.close(self, ctx)
 
     @zwierzaki_.command(aliases=["osobowość", "o"])
@@ -619,7 +621,12 @@ class Info(commands.Cog):
                 f"{', '.join(villagers)}"
             )
         else:
-            return await ctx.send(embed=villager_profile(villager))
+            emoji = SPECIES_EMOJI.get(villager.species, "")
+            return await ctx.send(
+                embed=villager_profile(
+                    f"{emoji} **{villager.name}** {emoji}", villager
+                )
+            )
 
     @zwierzaki_.command(aliases=["profil", "p"])
     async def profile(self, ctx: commands.Context, *, tekst: str):
@@ -632,7 +639,7 @@ class Info(commands.Cog):
                 f":crying_cat_face: "
                 f'Nie znaleziono zwierzaka o imieniu "{tekst.capitalize()}".'
             )
-        emoji = SPECIES_EMOJI.get(villager.species)
+        emoji = SPECIES_EMOJI.get(villager.species, "")
         if villager.name == "Pietro":
             knife = self.bot.get_emoji(KNIFE_EMOJI)
             knife: Emoji
@@ -646,4 +653,42 @@ class Info(commands.Cog):
             embed=villager_profile(
                 f"{emoji} **{villager.name}** {emoji}", villager
             ),
+        )
+
+    @zwierzaki_.command(aliases=["karta", "k"])
+    async def profile(self, ctx: commands.Context, *, tekst: str):
+        """Wyświetla informacje o danym zwierzaku, plus prezent."""
+        tekst = tekst.lower().strip()
+        with db:
+            villager = Villager.get_or_none(Villager.name ** tekst)
+        if not villager:
+            return await ctx.send(
+                f":crying_cat_face: "
+                f'Nie znaleziono zwierzaka o imieniu "{tekst.capitalize()}".'
+            )
+        emoji = SPECIES_EMOJI.get(villager.species, "")
+        if villager.name == "Pietro":
+            knife = self.bot.get_emoji(KNIFE_EMOJI)
+            knife: Emoji
+            if knife and knife.is_usable():
+                return await ctx.send(
+                    embed=villager_profile(
+                        f"{knife} **{villager.name}** {knife}", villager
+                    ),
+                )
+        extra_args = {}
+        path = (
+            RZEPABOT_ROOT
+            / "rzepabot"
+            / "data"
+            / "cards"
+            / f"{villager.name}.bin"
+        )
+        if path.is_file():
+            extra_args["file"] = File(path.absolute())
+        return await ctx.send(
+            embed=villager_profile(
+                f"{emoji} **{villager.name}** {emoji}", villager
+            ),
+            **extra_args,
         )

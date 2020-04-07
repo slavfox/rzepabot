@@ -56,3 +56,4 @@ dmypy.json
 ._*
 .benchmarks/
 *.db
+*.bin

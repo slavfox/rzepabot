@@ -211,6 +211,7 @@ REVERSE_SPECIES = {
     "🐄": "Krowa",
 }
 
+
 class BaseModel(Model):
     class Meta:
         database = db
