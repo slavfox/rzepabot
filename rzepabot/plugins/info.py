@@ -656,7 +656,7 @@ class Info(commands.Cog):
         )
 
     @zwierzaki_.command(aliases=["karta", "k"])
-    async def profile(self, ctx: commands.Context, *, tekst: str):
+    async def card(self, ctx: commands.Context, *, tekst: str):
         """Wyświetla informacje o danym zwierzaku, plus prezent."""
         tekst = tekst.lower().strip()
         with db:
