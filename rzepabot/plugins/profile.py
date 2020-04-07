@@ -235,7 +235,7 @@ class Profil(commands.Cog):
         return await ctx.send(
             f"🏕 {ctx.author.mention}, zarejestrowano nowego mieszkańca "
             f"twojej wyspy: {villager.name}.",
-            embed=villager_profile(villager),
+            embed=villager_profile(villager.name, villager),
         )
 
     @commands.command(aliases=["wyprowadź", "wyprowadz", "wyrzuć", "wyrzuc"])
@@ -264,7 +264,8 @@ class Profil(commands.Cog):
         return await ctx.send(
             f"🏕 {ctx.author.mention}, usunięto z twojej wyspy zwierzaka: "
             f"{residency.villager.name}.",
-            embed=villager_profile(residency.villager),
+            embed=villager_profile(residency.villager.name,
+                                   residency.villager),
         )
 
     @commands.command(aliases=["profil"])
