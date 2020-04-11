@@ -172,6 +172,7 @@ class RzepaBot(commands.Bot):
                 if guild.discord_id not in joined_guilds:
                     guild.delete_instance()
         self.loop.create_task(self.manage_presence())
+        self.loop.create_task(self.cleanup())
 
     async def manage_presence(self):
         while True:

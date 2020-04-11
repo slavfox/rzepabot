@@ -282,6 +282,9 @@ class Critter(BaseModel):
     location = CharField()
     is_fish = BooleanField()
 
+class MuseumCritter(BaseModel):
+    critter = ForeignKeyField(Critter, backref="museums")
+    island = ForeignKeyField(Island, backref="critters")
 
 class HotItem(BaseModel):
     user = ForeignKeyField(User, backref="hot_items")

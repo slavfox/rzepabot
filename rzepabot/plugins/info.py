@@ -58,6 +58,21 @@ rev_months = {
     11: "grudzień",
 }
 
+in_month = {
+    1: "styczniu",
+    2: "lutym",
+    3: "marcu",
+    4: "kwietniu",
+    5: "maju",
+    6: "czerwcu",
+    7: "lipcu",
+    8: "sierpniu",
+    9: "wrześniu",
+    10: "październiku",
+    11: "listopadzie",
+    12: "grudniu"
+}
+
 
 def villager_profile(title, villager: Villager):
     if villager.name == "Pietro":
@@ -693,3 +708,79 @@ class Info(commands.Cog):
             ),
             **extra_args,
         )
+
+    @zwierzaki_.command(aliases=["urodziny", "u"])
+    async def birthday(
+        self, ctx: commands.Context, miesiac: Optional[int], dzien: Optional[
+            int]
+    ):
+        """
+        Wyświetla zwierzaki według urodzin.
+
+        Wywołane jako `$zwierzaki urodziny` wyświetla zwierzaki obchodzące
+        urodziny dzisiaj.
+        Wywołane jako `$zwierzaki urodziny 12` wyświetla zwierzaki
+        obchodzące urodziny w grudniu.
+        Wywołane jako `$zwierzaki urodziny 12 24` wyświetla zwierzaki
+        obchodzące urodziny 24go grudnia.
+        """
+        now = pendulum.now()
+        if miesiac is None and dzien is None:
+            miesiac = now.month
+            dzien = now.day
+        if dzien is None:
+            try:
+                human_date = f"w {in_month[miesiac]}"
+            except KeyError:
+                raise RzepaException(
+                    f"{miesiac} nie jest poprawnym numerem miesiąca."
+                )
+        else:
+            human_date = now.replace(month=miesiac, day=dzien).format(
+                "DD MMMM"
+            )
+
+        with db:
+            filters = [
+                Villager.birthday_month == miesiac
+            ]
+            if dzien is not None:
+                filters.append(Villager.birthday_day == dzien)
+            villagers = list(Villager.select().where(
+                *filters
+            ).order_by(
+                Villager.birthday_month,
+                Villager.birthday_day
+            ).objects())
+        if not villagers:
+            return await ctx.send(
+                f":calendar: "
+                f'Żaden zwierzak nie obchodzi urodzin {human_date}.'
+            )
+        elif len(villagers) == 1:
+            v = villagers[0]
+            emoji = SPECIES_EMOJI.get(v.species, "")
+            return await ctx.send(
+                f":calendar: "
+                f'{human_date.capitalize()} urodziny obchodzi {v.name}.',
+                embed=villager_profile(f"{emoji} **{v.name}** {emoji}", v)
+            )
+        else:
+            embed = Embed(
+                title=f":calendar: Zwierzaki obchodzące urodziny"
+                      f" {human_date} :calendar:",
+                color=0x8AD88A
+            )
+            vdays = {}
+            for v in villagers:
+                vdays.setdefault(v.birthday_day, []).append(v)
+            for day, vs in vdays.items():
+                v = ", ".join(
+                    [f"[{v.name}](https://animalcrossing.fandom.com/wiki/"
+                     f"{quote(v.name)})" for v in vs]
+                )
+                embed.add_field(
+                    name=now.replace(month=miesiac, day=day).format("DD MMMM"),
+                    value=v
+                )
+            return await ctx.send(embed=embed)
