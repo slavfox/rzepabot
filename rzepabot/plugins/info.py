@@ -737,7 +737,7 @@ class Info(commands.Cog):
                 )
         else:
             human_date = now.replace(month=miesiac, day=dzien).format(
-                "DD MMMM"
+                "D MMMM"
             )
 
         with db:
@@ -780,7 +780,7 @@ class Info(commands.Cog):
                      f"{quote(v.name)})" for v in vs]
                 )
                 embed.add_field(
-                    name=now.replace(month=miesiac, day=day).format("DD MMMM"),
+                    name=now.replace(month=miesiac, day=day).format("D MMMM"),
                     value=v
                 )
             return await ctx.send(embed=embed)
