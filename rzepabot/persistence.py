@@ -8,6 +8,8 @@ from __future__ import annotations
 from typing import Set
 from dataclasses import dataclass
 
+from datetime import datetime
+
 from peewee import (
     BooleanField,
     CharField,
@@ -333,8 +335,8 @@ def get_user_and_guild(user_id, discord_guild, dbcontext):
 
 def cleanup():
     now = tznow_dt()
-    day_ago = now.subtract(days=1)
-    month_ago = now.subtract(months=1)
+    day_ago = datetime.fromtimestamp(now.subtract(days=1).timestamp())
+    month_ago = datetime.fromtimestamp(now.subtract(months=1).timestamp())
     with db:
         StalkPrice.delete().where(StalkPrice.timestamp < month_ago).execute()
         HotItem.delete().where(HotItem.timestamp < day_ago).execute()
