@@ -33,7 +33,7 @@ def datetime_from_timestamp(ts):
 def get_current_week_prices(user: User):
     now = tznow_dt()
     start_of_week = (
-        now.shift(weekday=6).shift(weeks=-1).replace(hour=7, minute=0)
+        now.replace(weekday=6).subtract(weeks=1).replace(hour=7, minute=0)
     )
     with db:
         prices = (

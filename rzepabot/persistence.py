@@ -333,8 +333,8 @@ def get_user_and_guild(user_id, discord_guild, dbcontext):
 
 def cleanup():
     now = tznow_dt()
-    day_ago = now.shift(days=-1)
-    month_ago = now.shift(months=-1)
+    day_ago = now.subtract(days=1)
+    month_ago = now.subtract(months=1)
     with db:
         StalkPrice.delete().where(StalkPrice.timestamp < month_ago).execute()
         HotItem.delete().where(HotItem.timestamp < day_ago).execute()
