@@ -234,11 +234,19 @@ class Profil(commands.Cog):
                 )
         return await ctx.send(
             f"🏕 {ctx.author.mention}, zarejestrowano nowego mieszkańca "
-            f"twojej wyspy: {villager.name}.",
-            embed=villager_profile(villager.name, villager),
+            f"twojej wyspy: {villager.name}."
         )
 
-    @commands.command(aliases=["wyprowadź", "wyprowadz", "wyrzuć", "wyrzuc"])
+    @commands.command(
+        aliases=[
+            "wyprowadź",
+            "wyprowadz",
+            "wyrzuć",
+            "wyrzuc",
+            "wyjeb",
+            "wypierdol",
+        ]
+    )
     async def move_out(self, ctx: commands.Context, zwierzak: str):
         """
         Wyrzuca mieszkańca z Twojej wyspy.
@@ -261,11 +269,14 @@ class Profil(commands.Cog):
                     f"nie ma zwierzaka: {clean}"
                 )
             residency.delete_instance()
+        message = ctx.invoked_with.replace("dź", "dz").replace("ć", "c")
+        if message == "wyjeb":
+            message = "wyjebano"
+        else:
+            message = message + "ono"
         return await ctx.send(
-            f"🏕 {ctx.author.mention}, usunięto z twojej wyspy zwierzaka: "
-            f"{residency.villager.name}.",
-            embed=villager_profile(residency.villager.name,
-                                   residency.villager),
+            f"🏕 {ctx.author.mention}, {message} z twojej wyspy zwierzaka: "
+            f"{residency.villager.name}."
         )
 
     @commands.command(aliases=["profil"])

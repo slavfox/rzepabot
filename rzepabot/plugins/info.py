@@ -70,7 +70,7 @@ in_month = {
     9: "wrześniu",
     10: "październiku",
     11: "listopadzie",
-    12: "grudniu"
+    12: "grudniu",
 }
 
 
@@ -93,7 +93,7 @@ def villager_profile(title, villager: Villager):
         .add_field(
             name="Imię",
             value=f"{PERSONALITY_GENDER[villager.personality]} "
-                  f"{villager.name}",
+            f"{villager.name}",
             inline=False,
         )
         .add_field(name="Gatunek", value=f"{species}", inline=False,)
@@ -302,6 +302,25 @@ class Info(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+    @commands.command(aliases=["amiibomb"])
+    async def amiibo(self, ctx: commands.Context):
+        """
+        Wyświetla instrukcje dotyczące nagrywania własnych kart amiibo.
+        """
+        embed = Embed(
+            title="Poradnik jak nagrywać własne amiibo",
+            description="Postępuj według instrukcji z [tego linku]("
+            "https://www.reddit.com/r/Amiibomb/comments/5ywlol/"
+            "howto_the_easy_guide_to_making_your_own_amiibo/).\n"
+            "Zrzutki kart amiibo są dostępne za pomocą komendy "
+            "`$zwierzaki karta <imię>`.",
+            color=0x32CD32,
+        ).set_image(
+            url="https://animalcrossingworld.com/wp-content/uploads/"
+            "2015/06/amiibo_card_AnimalCrossing_fan-790x309.png"
+        )
+        return ctx.send()
 
     @commands.group(aliases=["ryby", "r"])
     async def ryby_(self, ctx: commands.Context):
@@ -711,8 +730,10 @@ class Info(commands.Cog):
 
     @zwierzaki_.command(aliases=["urodziny", "u"])
     async def birthday(
-        self, ctx: commands.Context, miesiac: Optional[int], dzien: Optional[
-            int]
+        self,
+        ctx: commands.Context,
+        miesiac: Optional[int],
+        dzien: Optional[int],
     ):
         """
         Wyświetla zwierzaki według urodzin.
@@ -736,51 +757,50 @@ class Info(commands.Cog):
                     f"{miesiac} nie jest poprawnym numerem miesiąca."
                 )
         else:
-            human_date = now.replace(month=miesiac, day=dzien).format(
-                "D MMMM"
-            )
+            human_date = now.replace(month=miesiac, day=dzien).format("D MMMM")
 
         with db:
-            filters = [
-                Villager.birthday_month == miesiac
-            ]
+            filters = [Villager.birthday_month == miesiac]
             if dzien is not None:
                 filters.append(Villager.birthday_day == dzien)
-            villagers = list(Villager.select().where(
-                *filters
-            ).order_by(
-                Villager.birthday_month,
-                Villager.birthday_day
-            ).objects())
+            villagers = list(
+                Villager.select()
+                .where(*filters)
+                .order_by(Villager.birthday_month, Villager.birthday_day)
+                .objects()
+            )
         if not villagers:
             return await ctx.send(
                 f":calendar: "
-                f'Żaden zwierzak nie obchodzi urodzin {human_date}.'
+                f"Żaden zwierzak nie obchodzi urodzin {human_date}."
             )
         elif len(villagers) == 1:
             v = villagers[0]
             emoji = SPECIES_EMOJI.get(v.species, "")
             return await ctx.send(
                 f":calendar: "
-                f'{human_date.capitalize()} urodziny obchodzi {v.name}.',
-                embed=villager_profile(f"{emoji} **{v.name}** {emoji}", v)
+                f"{human_date.capitalize()} urodziny obchodzi {v.name}.",
+                embed=villager_profile(f"{emoji} **{v.name}** {emoji}", v),
             )
         else:
             embed = Embed(
                 title=f":calendar: Zwierzaki obchodzące urodziny"
-                      f" {human_date} :calendar:",
-                color=0x8AD88A
+                f" {human_date} :calendar:",
+                color=0x8AD88A,
             )
             vdays = {}
             for v in villagers:
                 vdays.setdefault(v.birthday_day, []).append(v)
             for day, vs in vdays.items():
                 v = ", ".join(
-                    [f"[{v.name}](https://animalcrossing.fandom.com/wiki/"
-                     f"{quote(v.name)})" for v in vs]
+                    [
+                        f"[{v.name}](https://animalcrossing.fandom.com/wiki/"
+                        f"{quote(v.name)})"
+                        for v in vs
+                    ]
                 )
                 embed.add_field(
                     name=now.replace(month=miesiac, day=day).format("D MMMM"),
-                    value=v
+                    value=v,
                 )
             return await ctx.send(embed=embed)
