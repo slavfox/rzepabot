@@ -237,12 +237,9 @@ class Profil(commands.Cog):
             user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
             island, created = Island.get_or_create(villager=user)
             if not created:
-                if (
-                    Residency.select()
-                    .where(Residency.acprofile == island)
-                    .count()
-                    > 10 - len(villagers)
-                ):
+                if Residency.select().where(
+                    Residency.acprofile == island
+                ).count() > 10 - len(villagers):
                     raise RzepaException(
                         f"{ctx.author.mention}, "
                         f"na wyspie możesz mieć maksymalnie 10 zwierzaków."
@@ -259,7 +256,7 @@ class Profil(commands.Cog):
                         raise RzepaException(
                             f"Nie ma takiego zwierzaka: {clean}"
                         )
-                    valid_villagers.append(villager.name)
+                    valid_villagers.append(villager)
                     try:
                         Residency.create(villager=villager, acprofile=island)
                     except IntegrityError:
@@ -273,9 +270,15 @@ class Profil(commands.Cog):
                 f"{len(valid_villagers)} nowych mieszkańców "
                 f"twojej wyspy."
             )
+        v = valid_villagers[0]
         return await ctx.send(
-            f"🏕 {ctx.author.mention}, zarejestrowano nowego mieszkańca "
-            f"twojej wyspy: {valid_villagers[0]}."
+            ctx.author.mention,
+            embed=Embed(colour=0x8AD88A)
+            .add_field(
+                name=f"🏕 Zarejestrowano nowego mieszkańca twojej wyspy 🏕",
+                value=v.link,
+            )
+            .set_thumbnail(v.image_url),
         )
 
     @commands.command(
@@ -325,8 +328,13 @@ class Profil(commands.Cog):
                 f"{len(villagers)} zwierzaków."
             )
         return await ctx.send(
-            f"🏕 {ctx.author.mention}, {message} z twojej wyspy zwierzaka: "
-            f"{residency.villager.name}."
+            ctx.author.mention,
+            embed=Embed(colour=0x8AD88A)
+            .add_field(
+                name=f"🏕 {message.capitalize()} z twojej wyspy zwierzaka 🏕",
+                value=residency.villager.link,
+            )
+            .set_thumbnail(residency.villager.image_url),
         )
 
     @commands.command(aliases=["profil"])

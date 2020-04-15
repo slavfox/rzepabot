@@ -9,6 +9,7 @@ from typing import Set
 from dataclasses import dataclass
 
 from datetime import datetime
+from urllib.parse import quote
 
 from peewee import (
     BooleanField,
@@ -264,6 +265,13 @@ class Villager(BaseModel):
     personality = CharField()
     species = CharField()
     image_url = TextField()
+
+    @property
+    def link(self):
+        return (
+            f"[{self.name}](https://animalcrossing.fandom.com/wiki/"
+            f"{quote(self.name)})"
+        )
 
 
 class Residency(BaseModel):
