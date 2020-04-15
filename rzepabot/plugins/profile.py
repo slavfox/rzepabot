@@ -96,7 +96,7 @@ def format_profile(
         fruit = FRUIT[island.native_fruit]
         embed.add_field(
             name="Natywny owoc",
-            value=f"{fruit.emoji} " f"{fruit.name.capitalize()}",
+            value=f"{fruit.emoji} " f"{fruit.pl_name.capitalize()}",
             inline=False,
         )
     if island.friend_code:
