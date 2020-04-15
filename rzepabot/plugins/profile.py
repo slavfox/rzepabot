@@ -273,12 +273,12 @@ class Profil(commands.Cog):
         v = valid_villagers[0]
         return await ctx.send(
             ctx.author.mention,
-            embed=Embed(colour=0x8AD88A)
-            .add_field(
-                name=f"🏕 Zarejestrowano nowego mieszkańca twojej wyspy 🏕",
-                value=v.link,
-            )
-            .set_thumbnail(url=v.image_url),
+            embed=Embed(
+                colour=0x8AD88A,
+                description=f"🏕 Zarejestrowano "
+                f"nowego mieszkańca "
+                f"twojej wyspy: {v.link}",
+            ).set_thumbnail(url=v.image_url),
         )
 
     @commands.command(
@@ -329,12 +329,12 @@ class Profil(commands.Cog):
             )
         return await ctx.send(
             ctx.author.mention,
-            embed=Embed(colour=0x8AD88A)
-            .add_field(
-                name=f"🏕 {message.capitalize()} z twojej wyspy zwierzaka 🏕",
-                value=residency.villager.link,
-            )
-            .set_thumbnail(url=residency.villager.image_url),
+            embed=Embed(
+                colour=0x8AD88A,
+                description=f"🏕 {message.capitalize()} z "
+                f"twojej wyspy zwierzaka: "
+                f"{residency.villager.link}",
+            ).set_thumbnail(url=residency.villager.image_url),
         )
 
     @commands.command(aliases=["profil"])
