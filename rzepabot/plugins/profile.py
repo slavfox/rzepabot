@@ -278,7 +278,7 @@ class Profil(commands.Cog):
                 name=f"🏕 Zarejestrowano nowego mieszkańca twojej wyspy 🏕",
                 value=v.link,
             )
-            .set_thumbnail(v.image_url),
+            .set_thumbnail(url=v.image_url),
         )
 
     @commands.command(
@@ -334,7 +334,7 @@ class Profil(commands.Cog):
                 name=f"🏕 {message.capitalize()} z twojej wyspy zwierzaka 🏕",
                 value=residency.villager.link,
             )
-            .set_thumbnail(residency.villager.image_url),
+            .set_thumbnail(url=residency.villager.image_url),
         )
 
     @commands.command(aliases=["profil"])
