@@ -241,12 +241,11 @@ class Profil(commands.Cog):
                     Residency.select()
                     .where(Residency.acprofile == island)
                     .count()
-                    >= 10
+                    > 10 - len(villagers)
                 ):
                     raise RzepaException(
                         f"{ctx.author.mention}, "
-                        f"masz już 10 zwierzaków na swojej wyspie. Zanim "
-                        f"wprowadzisz nowego, musisz kogoś wyprowadzić."
+                        f"na wyspie możesz mieć maksymalnie 10 zwierzaków."
                     )
             valid_villagers = []
             with db.atomic() as transaction:
