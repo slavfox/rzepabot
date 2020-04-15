@@ -117,6 +117,34 @@ def format_profile(
 class Profil(commands.Cog):
     """Komendy dotyczące informacji o użytkownikach."""
 
+    @commands.command(aliases=["owoc"])
+    async def set_fruit(self, ctx: commands.Context, owoc: str):
+        """
+        Pozwala ustawić natywny owoc wyspy.
+        """
+        owoc = owoc.strip()
+        fruit_index = None
+        _fruit = None
+        for idx, f in FRUIT.items():
+            if owoc in [f.name, f.pl_name, f.emoji, *f.aliases]:
+                fruit_index = idx
+                _fruit = f
+                break
+        if fruit_index is None:
+            owoc = await commands.clean_content().convert(ctx, owoc)
+            raise RzepaException(
+                f"{owoc} nie jest możliwym natywnym owocem wyspy."
+            )
+        with db:
+            user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
+            island, _ = Island.get_or_create(villager=user)
+            island.native_fruit = fruit_index
+            island.save()
+        return await ctx.send(
+            f"{_fruit.emoji} {ctx.author.mention}, zarejestrowano "
+            f"**{_fruit.pl_name}** jako natywny owoc twojej wyspy."
+        )
+
     @commands.command(aliases=["fc", "friendcode"])
     async def set_fc(self, ctx: commands.Context, friend_code: str):
         """
@@ -200,10 +228,11 @@ class Profil(commands.Cog):
         )
 
     @commands.command(aliases=["wprowadź", "wprowadz"])
-    async def move_in(self, ctx: commands.Context, zwierzak: str):
+    async def move_in(self, ctx: commands.Context, *, zwierzaki: str):
         """
-        Dodaje mieszkańca do Twojej wyspy.
+        Dodaje 1 lub więcej mieszkańców (rozdzielonych przecinkami) na wyspę.
         """
+        villagers = [z.strip() for z in zwierzaki.split(",")]
         with db:
             user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
             island, created = Island.get_or_create(villager=user)
@@ -219,22 +248,35 @@ class Profil(commands.Cog):
                         f"masz już 10 zwierzaków na swojej wyspie. Zanim "
                         f"wprowadzisz nowego, musisz kogoś wyprowadzić."
                     )
-
-            villager = (
-                Villager.select().where(Villager.name ** zwierzak).first()
+            valid_villagers = []
+            with db.atomic() as transaction:
+                for v in villagers:
+                    villager = (
+                        Villager.select().where(Villager.name ** v).first()
+                    )
+                    if not villager:
+                        clean = await commands.clean_content().convert(ctx, v)
+                        transaction.rollback()
+                        raise RzepaException(
+                            f"Nie ma takiego zwierzaka: {clean}"
+                        )
+                    valid_villagers.append(villager.name)
+                    try:
+                        Residency.create(villager=villager, acprofile=island)
+                    except IntegrityError:
+                        transaction.rollback()
+                        raise RzepaException(
+                            f"{villager.name} jest już na twojej " f"wyspie."
+                        )
+        if len(valid_villagers) > 1:
+            return await ctx.send(
+                f"🏕 {ctx.author.mention}, zarejestrowano "
+                f"{len(valid_villagers)} nowych mieszkańców "
+                f"twojej wyspy."
             )
-            if not villager:
-                clean = await commands.clean_content().convert(ctx, zwierzak)
-                raise RzepaException(f"Nie ma takiego zwierzaka: {clean}")
-            try:
-                Residency.create(villager=villager, acprofile=island)
-            except IntegrityError:
-                raise RzepaException(
-                    f"{villager.name} jest już na twojej " f"wyspie."
-                )
         return await ctx.send(
             f"🏕 {ctx.author.mention}, zarejestrowano nowego mieszkańca "
-            f"twojej wyspy: {villager.name}."
+            f"twojej wyspy: {valid_villagers[0]}."
         )
 
     @commands.command(
@@ -247,33 +289,42 @@ class Profil(commands.Cog):
             "wypierdol",
         ]
     )
-    async def move_out(self, ctx: commands.Context, zwierzak: str):
+    async def move_out(self, ctx: commands.Context, *, zwierzaki: str):
         """
-        Wyrzuca mieszkańca z Twojej wyspy.
+        Usuwa 1 lub więcej mieszkańców (rozdzielonych przecinkami) z wyspy.
         """
+        villagers = [z.strip() for z in zwierzaki.split(",")]
         with db:
             user, _ = get_user_and_guild(ctx.author.id, ctx.guild, db)
             island, created = Island.get_or_create(villager=user)
-            residency = (
-                Residency.select()
-                .join(Villager)
-                .where(
-                    Residency.acprofile == island, Villager.name ** zwierzak
+            residencies = []
+            for v in villagers:
+                residency = (
+                    Residency.select()
+                    .join(Villager)
+                    .where(Residency.acprofile == island, Villager.name ** v)
+                    .first()
                 )
-                .first()
-            )
-            if not residency:
-                clean = await commands.clean_content().convert(ctx, zwierzak)
-                raise RzepaException(
-                    f"{ctx.author.mention}, na twojej wyspie "
-                    f"nie ma zwierzaka: {clean}"
-                )
-            residency.delete_instance()
+                if not residency:
+                    clean = await commands.clean_content().convert(ctx, v)
+                    raise RzepaException(
+                        f"{ctx.author.mention}, na twojej wyspie "
+                        f"nie ma zwierzaka: {clean}"
+                    )
+                residencies.append(residency)
+            for residency in residencies:
+                residency.delete_instance()
         message = ctx.invoked_with.replace("dź", "dz").replace("ć", "c")
         if message == "wyjeb":
             message = "wyjebano"
         else:
             message = message + "ono"
+
+        if len(villagers) > 1:
+            return await ctx.send(
+                f"🏕 {ctx.author.mention}, {message} z twojej wyspy "
+                f"{len(villagers)} zwierzaków."
+            )
         return await ctx.send(
             f"🏕 {ctx.author.mention}, {message} z twojej wyspy zwierzaka: "
             f"{residency.villager.name}."

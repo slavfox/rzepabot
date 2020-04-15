@@ -527,9 +527,8 @@ class Info(commands.Cog):
         """
         if ctx.invoked_subcommand is None:
             if ctx.subcommand_passed:
-                return await self.profile(
-                    ctx, tekst=ctx.subcommand_passed.strip()
-                )
+                query = ctx.view.buffer[ctx.view.previous :]
+                return await self.profile(ctx, tekst=query.strip())
             return await Dodokod.close(self, ctx)
 
     @zwierzaki_.command(aliases=["osobowość", "o"])
@@ -635,7 +634,7 @@ class Info(commands.Cog):
         return await ctx.send(embed=embed)
 
     @zwierzaki_.command(aliases=["szukaj", "znajdź", "s", "z"])
-    async def find(self, ctx: commands.Context, tekst: str):
+    async def find(self, ctx: commands.Context, *, tekst: str):
         """Znajduje zwierzaki których imię zawiera podany tekst."""
         tekst = tekst.lower().strip()
         with db:
