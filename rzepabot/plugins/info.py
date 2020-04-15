@@ -308,19 +308,20 @@ class Info(commands.Cog):
         """
         Wyświetla instrukcje dotyczące nagrywania własnych kart amiibo.
         """
-        embed = Embed(
-            title="Poradnik jak nagrywać własne amiibo",
-            description="Postępuj według instrukcji z [tego linku]("
-            "https://www.reddit.com/r/Amiibomb/comments/5ywlol/"
-            "howto_the_easy_guide_to_making_your_own_amiibo/).\n"
-            "Zrzutki kart amiibo są dostępne za pomocą komendy "
-            "`$zwierzaki karta <imię>`.",
-            color=0x32CD32,
-        ).set_image(
-            url="https://animalcrossingworld.com/wp-content/uploads/"
-            "2015/06/amiibo_card_AnimalCrossing_fan-790x309.png"
+        return await ctx.send(
+            embed=Embed(
+                title="Poradnik jak nagrywać własne amiibo",
+                description="Postępuj według instrukcji z [tego linku]("
+                "https://www.reddit.com/r/Amiibomb/comments/5ywlol/"
+                "howto_the_easy_guide_to_making_your_own_amiibo/).\n"
+                "Zrzutki kart amiibo są dostępne za pomocą komendy "
+                "`$zwierzaki karta <imię>`.",
+                color=0x32CD32,
+            ).set_image(
+                url="https://animalcrossingworld.com/wp-content/uploads/"
+                "2015/06/amiibo_card_AnimalCrossing_fan-790x309.png"
+            )
         )
-        return await ctx.send()
 
     @commands.group(aliases=["ryby", "r"])
     async def ryby_(self, ctx: commands.Context):
