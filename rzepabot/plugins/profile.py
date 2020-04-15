@@ -122,7 +122,7 @@ class Profil(commands.Cog):
         """
         Pozwala ustawić natywny owoc wyspy.
         """
-        owoc = owoc.strip()
+        owoc = owoc.strip().lower()
         fruit_index = None
         _fruit = None
         for idx, f in FRUIT.items():
