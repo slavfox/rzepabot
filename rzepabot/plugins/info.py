@@ -320,7 +320,7 @@ class Info(commands.Cog):
             url="https://animalcrossingworld.com/wp-content/uploads/"
             "2015/06/amiibo_card_AnimalCrossing_fan-790x309.png"
         )
-        return ctx.send()
+        return await ctx.send()
 
     @commands.group(aliases=["ryby", "r"])
     async def ryby_(self, ctx: commands.Context):
